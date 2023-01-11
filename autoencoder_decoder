@@ -1,0 +1,88 @@
+#%%
+def disable_filters(layer,filters):
+    
+    #for weights
+    var_copy = layer.weights[0].numpy()
+    for filter in filters:
+        var_copy[...,filter]=0
+    layer.weights[0].assign(var_copy)
+
+    #for biases
+    var_copy = layer.weights[1].numpy()
+    for filter in filters:
+        var_copy[filter]=0
+    layer.weights[1].assign(var_copy)
+
+def modify_filter_activations(layer,filters):
+    
+    #for biases
+    var_copy = layer.weights[1].numpy()
+    for i in range(len(filters)):
+        var_copy[i]=var_copy[i]+filters[i]
+    layer.weights[1].assign(var_copy)
+    
+    
+def fmatrix_to_list(fmatrix):
+    #fmatrix contains 1s where the filter is enabled and 0s for disbaled ones
+    #need to convert it into filter numbers of the disabled filters
+    filters = []
+    for filter_list in fmatrix:
+        filters.append(np.where(filter_list)[0])
+    return filters
+#%% then verify if GAP a particular filter is 0
+x_test,y_test = next(test_gen_classifier)
+
+#%%
+
+layer = classifier.layers[-5]
+filters = np.random.randint(0,511,0)
+print("Disabling {a} filters".format(a=len(filters)))
+disable_filters(layer,filters)
+
+pred_A = classifier(x_test)
+
+classifier.load_weights(filepath='/content/drive/MyDrive/ResearchWork/CFE/model_fine_tune_epoch_150.hdf5')
+pred_B = classifier(x_test)
+
+#print("pred_A[0][0]-pred_B[0][0], ", (pred_A[0][0]-pred_B[0][0]).numpy())
+#classifier.layers[-5].weights[0][...,0]
+disable_filters(layer,filters)
+
+classifier_encoder = keras.Model(classifier.input, classifier.layers[-4].output)
+classifier_encoder.trainable = False
+#classifier_encoder.summary()
+
+
+#Decoder 
+decoder_input= keras.Input(shape=classifier.layers[-4].output.shape[1:])
+
+x = Conv2D(512, (3, 3), activation = 'relu', padding = 'same', name = 'conv6_1')(decoder_input)
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same', name = 'conv6_2')(x)
+
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same', name = 'conv7_1')(x)
+
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same', name = 'conv7_3')(x)
+                          
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same', name = 'conv8_1')(x)
+                                             
+x = UpSampling2D((2, 2))(x) 
+decoded = Conv2D(3, (3, 3), activation = None, padding = 'same', name = 'conv9_1')(x)
+                                            
+decoder = keras.Model(decoder_input, decoded, name='Decoder')
+# decoder.summary()
+
+#%%
+decoder.load_weights('/content/drive/MyDrive/ResearchWork/CFE/CUB_5_decoder_weights_1000_ephocs.h5')
+
+
+#AUTOENCODER
+auto_input = keras.Input(shape=(224,224,3))
+encoded = classifier_encoder(auto_input)
+decoded = decoder(encoded)
+
+autoencoder = keras.Model(auto_input, decoded, name='auto_encoder')
+#%%
