@@ -1,0 +1,40 @@
+data_dir = '/content/drive/MyDrive/ResearchWork/CFE/cub5_images'
+data_dir=pathlib.Path(data_dir)
+image_count = len(list(data_dir.glob('*/*.jpg')))
+print(image_count)
+
+train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(preprocessing_function = preprocess_input,
+    validation_split=0.2)
+test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(preprocessing_function = preprocess_input,
+    validation_split=0.2)
+
+batch_size=4
+train_gen_classifier = train_datagen.flow_from_directory(data_dir,
+                                                    target_size=(224, 224),
+                                                    color_mode='rgb',
+                                                    batch_size=batch_size,
+                                                    shuffle=False,
+                                                    subset ='training',
+                                                    )#class_mode='input')
+
+test_gen_classifier = test_datagen.flow_from_directory(data_dir,
+                                                  target_size=(224,224),
+                                                  batch_size=batch_size,
+                                                  shuffle=False,
+                                                  subset ='validation',
+                                                  )#class_mode='input')
+
+train_gen_decoder = train_datagen.flow_from_directory(data_dir,
+                                                    target_size=(224, 224),
+                                                    color_mode='rgb',
+                                                    batch_size=batch_size,
+                                                    shuffle=False,
+                                                    subset ='training',
+                                                    class_mode='input')
+
+test_gen_decoder = test_datagen.flow_from_directory(data_dir,
+                                                  target_size=(224,224),
+                                                  batch_size=batch_size,
+                                                  shuffle=False,
+                                                  subset ='validation',
+                                                  class_mode='input')
