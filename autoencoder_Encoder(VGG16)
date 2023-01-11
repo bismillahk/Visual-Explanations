@@ -1,0 +1,19 @@
+vgg = VGG16(weights='imagenet',include_top = False,input_shape=(32,32,3))
+
+base_model = tf.keras.Model(vgg.input,vgg.layers[-2].output)
+
+x =  MaxPooling2D()(base_model.output)
+mean_fmap = GlobalAveragePooling2D()(x)
+dropout = tf.keras.layers.Dropout(0.5)(mean_fmap)
+out = Dense(10,activation='softmax')(dropout)
+
+classifier = tf.keras.Model(inputs=[base_model.input], outputs= [out],name='base_model')
+
+classifier.compile(optimizer=optimizers.SGD(learning_rate=0.001/10, momentum = 0.9), 
+                  loss=['categorical_crossentropy'], 
+                  metrics=['accuracy'])
+
+#classifier.fit(x_train, y_train, batch_size =16, epochs=10, validation_data= [x_test,y_test])
+#classifier.save_weights('mnist_classifier_weights_epoch10.h5')
+
+classifier.load_weights('/content/drive/MyDrive/ResearchWork/CFE/Mnist_explanation/mnist_classifier_weights_epoch10.h5')
